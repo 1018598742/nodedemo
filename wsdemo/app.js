@@ -90,18 +90,19 @@ function createWebSocketServer(server, onConnection, onMessage, onClose, onError
     onError = onError || function (err) {
         console.log('[WebSocket] error: ' + err);
     };
-    wss.on('connection', function (ws) {
-        let location = url.parse(ws.upgradeReq.url, true);
+    wss.on('connection', function (ws,req) {
+        let location = url.parse(req.url, true);
         console.log('[WebSocketServer] connection: ' + location.href);
         ws.on('message', onMessage);
         ws.on('close', onClose);
         ws.on('error', onError);
+        console.log('connection='+location.pathname)
         if (location.pathname !== '/ws/chat') {
             // close ws:
             ws.close(4000, 'Invalid URL');
         }
         // check user:
-        let user = parseUser(ws.upgradeReq);
+        let user = parseUser(req);
         if (!user) {
             ws.close(4001, 'Invalid user');
         }
@@ -130,7 +131,7 @@ function onConnect() {
     let msg = createMessage('join', user, `${user.name} joined.`);
     this.wss.broadcast(msg);
     // build user list:
-    let users = this.wss.clients.map(function (client) {
+    let users = Array.from(this.wss.clients).map(function (client) {
         return client.user;
     });
     this.send(createMessage('list', user, users));
